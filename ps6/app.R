@@ -5,20 +5,46 @@ library(ggplot2)
 my_data <- read.csv("car_data.csv")
 
 # Define UI for the app
-ui <- navbarPage(
-  "Car Data",
-  tabPanel(
-    "Table",
-    fluidPage(
-      selectInput("Year", "Select a Year to filter by:", choices = sort(unique(my_data$Year))),
-      tableOutput("my_table"),
-    )
-  ),
-  tabPanel(
-    "Plot",
-    fluidPage(
-      sliderInput("Price_range", "Select Price range:", min = 0, max = 100000, value = c(0, 50000)),
-      plotOutput("my_plot")
+ui <- fluidPage(
+  navbarPage(
+    "Car Data",
+    tabPanel(
+      "About",
+      fluidRow(
+        column(
+          width = 12,
+          h1("About Car Data"),
+          p("This dataset contains information about cars, including their make, model, year, mileage, and whether they are new or used."),
+          p("Use the tabs above to explore the dataset further."),
+          tableOutput("data_table")
+        )
+      )
+    ),
+    tabPanel(
+      "Table",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("Model", "Select a Model to filter by:", choices = unique(my_data$Model))
+        ),
+        mainPanel(
+          tableOutput("my_table")
+        )
+      )
+    ),
+    tabPanel(
+      "Plot",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("x_var", "X-Axis Variable", choices = names(my_data)),
+          selectInput("y_var", "Y-Axis Variable", choices = names(my_data)),
+          radioButtons("status", "Car Status:", choices = c("New", "Used"), selected = "New"),
+          selectInput("plot_type", "Select Plot Type", choices = c("Scatter", "Line", "Bar"), selected = "Scatter")
+        )
+        ,
+        mainPanel(
+          plotOutput("my_plot")
+        )
+      )
     )
   )
 )
@@ -26,26 +52,46 @@ ui <- navbarPage(
 # Define server logic for the app
 server <- function(input, output) {
   
-  # Define filtered data based on input values
+  # Define filtered data based on input values for table output
   filtered_data <- reactive({
-    subset(my_data, Year == input$Year & Price >= input$Price_range[1] & Price <= input$Price_range[2])
+    if (input$Model == "All") {
+      my_data_filtered <- my_data
+    } else {
+      my_data_filtered <- subset(my_data, Model == input$Model)
+    }
+    my_data_filtered
   })
   
-  # Define server-side code for table output
+  # Define filtered data based on input values for plot output
+  filtered_data_plot <- reactive({
+    if (input$Status == "All") {
+      my_data_filtered_plot <- subset(my_data, Model %in% c(input$Model1, input$Model2))
+    } else {
+      my_data_filtered_plot <- subset(my_data, Model %in% c(input$Model1, input$Model2) & Status == input$Status)
+    }
+    my_data_filtered_plot
+  })
+  # Displays head of data for about page
+  output$data_table <- renderTable({
+    head(my_data, 5)
+  })
+  # Define server logic for table output
   output$my_table <- renderTable({
     filtered_data()
   })
   
-  # Define server-side code for print output
-  output$filtered_data <- renderPrint({
-    filtered_data()
-  })
-  
-  # Define server-side code for plot output
+  # Define server logic for plot output
   output$my_plot <- renderPlot({
-    ggplot(filtered_data(), aes(x = Price)) + 
-      geom_histogram() +
-      xlim(input$Price_range)
+    x_var <- input$x_var
+    y_var <- input$y_var
+    plot_type <- input$plot_type
+    
+    filtered_data <- my_data %>%
+      filter(Status == input$status)
+    
+    ggplot(filtered_data, aes(x = !!sym(x_var), y = !!sym(y_var))) +
+      geom_point() +
+      labs(x = x_var, y = y_var, title = paste0(plot_type, " Plot"))
   })
   
 }

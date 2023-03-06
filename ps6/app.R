@@ -7,13 +7,13 @@ my_data <- read.csv("car_data.csv")
 # Define UI for the app
 ui <- fluidPage(
   navbarPage(
-    "Car Data",
+    "Car Data App",
     tabPanel(
       "About",
       fluidRow(
         column(
           width = 12,
-          h1("About Car Data"),
+          h1("About the Car Data App"),
           p("This dataset contains information about cars, including their make, model, year, mileage, and whether they are new or used."),
           p("Use the tabs above to explore the dataset further."),
           tableOutput("data_table")
